@@ -62,11 +62,6 @@ jobs:
     - name: Flutter doctor
       run: flutter doctor -v
 
-    - name: Prepare build environment
-      run: |
-        flutter pub get
-        flutter clean
-
     - name: Build IPA (Step 1 - Project creation)
       run: flet create myapp
 
