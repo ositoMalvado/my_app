@@ -54,7 +54,7 @@ jobs:
           ${{ runner.os }}-pub-
 
     - name: Install Flet
-      run: pip install flet
+      run: pip install flet==0.25.0.dev3519
       
     - name: Verify Flet installation
       run: flet --version
