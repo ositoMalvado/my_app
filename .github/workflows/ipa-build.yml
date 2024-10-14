@@ -39,6 +39,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+    - name: Install Compatible gRPC Manually
+      run: pip install grpcio==1.47.0
+
+    - name: Install Google API Core
+      run: pip install google-api-core[grpc]==2.21.0
+
 
     - name: Setup Flutter ${{ env.FLUTTER_VERSION }}
       uses: subosito/flutter-action@v2
