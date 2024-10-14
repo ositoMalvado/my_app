@@ -76,7 +76,7 @@ jobs:
       
     - name: Check build output
       run: |
-        ls -R build/ios/ipa
+        ls -R build/ipa
         echo "Build completed. Checking for IPA file..."
         find . -name "*.ipa"
 
@@ -84,7 +84,7 @@ jobs:
       uses: actions/upload-artifact@v4.3.4
       with:
         name: ipa-build-artifact
-        path: myapp/build/ios/ipa
+        path: myapp/build/ipa
         if-no-files-found: error
         overwrite: true
 
