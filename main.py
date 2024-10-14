@@ -1,107 +1,82 @@
+import asyncio
 import flet as ft
-from widgets.BotonTexto import BotonTexto
-from widgets.BotonesTheme import *
+from Widgets.controls import *
+
+class NavigationApp:
+
+    def cambiar_destino(self, e: ft.OptionalEventCallable):
+        self.page.controls = self.pages[int(e.data)]
+        self.page.update()
+
+    def __init__(self,
+            page: ft.Page,
+            pages: list[ft.Control],
+            destinations: list[ft.NavigationDestination]):
+        self.page = page
+        self.destinations = destinations
+        self.page.navigation_bar = ft.NavigationBar(
+            destinations=self.destinations,
+            on_change=self.cambiar_destino,
+        )
+        self.pages = pages
+
+        self.page.controls = self.pages[0]
+        self.page.update()
+
+
 
 def main(page: ft.Page):
-
-    titulo = "Utilidades"
-
-
-    page.padding = 0
-    page.spacing = 0
-
-
-
-    def menu_click(e):
-        if container_menu.offset == ft.Offset(0, 0):
-            container_menu.offset = ft.Offset(-1, 0)
-            container_menu.opacity = 0
-            menu_button.icon = ft.icons.MENU
-        else:
-            container_menu.offset = ft.Offset(0, 0)
-            container_menu.opacity = 1
-            menu_button.icon = ft.icons.ARROW_BACK_ROUNDED
-        menu_button.update()
-        container_menu.update()
-
-    menu_button = ft.IconButton(
-        ft.icons.MENU,
-        on_click=menu_click
+    page.bgcolor = ft.colors.BACKGROUND
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.theme = ft.Theme(
+        color_scheme_seed="#%02x%02x%02x" % (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     )
-
-
-    app_bar = ft.AppBar(
-        leading=menu_button,
-        title=ft.Text(titulo),
-        center_title=True
-    )
-
-    page.appbar = app_bar
-
-    app_stack = ft.Stack(
-        controls=[],
-        expand=True
-    )
-
-
-    columna_principal = ft.Column(
-        [
-            ft.Text("hola principal")
+    page.update()
+    app = NavigationApp(
+        page,
+        pages=[
+            [
+                ft.Container(content=CalculadoraPremio())
+            ],
+            # [
+            #     ft.Container(content=ft.Text("FED"))
+            # ],
+            # [
+            #     ft.Container(content=ft.Text("123"))
+            # ],
+            [
+                ft.Container(content=ft.Column(
+                    controls=[
+                        ft.Row(
+                            [
+                                ThemeButton(),
+                                ColorButton(),
+                            ],
+                        ),
+                        ft.Column(
+                            [
+                                ChatBot(
+                                    token="AIzaSyCTpmY_rKZLlWc-AnnyjUqbj5SHrfG3NWo",
+                                    bot_name=f"ChatBot",
+                                    user_name="Usuario",
+                                    json_path=f"chat_history.json",
+                                    autofocus=False,
+                                ),
+                            ],
+                            expand=True,
+                        ),
+                    ],
+                    expand=True
+                ),
+                expand=True)
+            ],
         ],
-        # alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-        expand=True
+        destinations=[
+            ft.NavigationBarDestination(icon=ft.icons.MENU, label="RUS"),
+            # ft.NavigationBarDestination(icon=ft.icons.MENU, label="FED"),
+            # ft.NavigationBarDestination(icon=ft.icons.MENU, label="123"),
+            ft.NavigationBarDestination(icon=ft.icons.MENU, label="XCV"),
+        ],
     )
 
-
-    container_principal = ft.Container(
-        content=columna_principal,
-        expand=True
-    )
-
-    def agregar_texto(e):
-
-        columna_principal.controls.append(
-            ft.Text(f"texto {len(columna_principal.controls)}")
-        )
-        columna_principal.update()
-
-    menu_items = [
-        ft.Row([ThemeButton(), ColorButton()]),
-        BotonTexto(texto=f"Inicio", on_click=agregar_texto),
-        BotonTexto(texto=f"Federación Patronal", on_click=agregar_texto),
-        BotonTexto(texto=f"Río Uruguay", on_click=agregar_texto),
-        BotonTexto(texto=f"General", on_click=agregar_texto, ultimo=True),
-        
-    ]
-
-    columna_menu = ft.Column(
-        menu_items,
-        spacing=0,
-        scroll="auto",
-        expand=True
-    )
-
-    container_menu = ft.Container(
-        content=columna_menu,
-        expand=True,
-        offset=ft.Offset(-1, 0),
-        opacity=0,
-        animate_opacity=ft.Animation(333, ft.AnimationCurve.EASE_IN_OUT),
-        border=ft.border.only(right=ft.border.BorderSide(1, ft.colors.ON_INVERSE_SURFACE)),
-        bgcolor=ft.colors.BACKGROUND,
-        padding=ft.padding.only(left=10, right=10),
-        animate_offset=ft.Animation(333, ft.AnimationCurve.EASE_IN_OUT)
-    )
-
-    app_stack.controls.append(container_principal)
-    app_stack.controls.append(container_menu)
-
-    page.add(
-        ft.SafeArea(
-            app_stack,
-            expand=True
-        )
-    )
-
-
-ft.app(main)
+ft.app(target=main, assets_dir="assets", view=ft.AppView.WEB_BROWSER)
