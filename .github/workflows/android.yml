@@ -48,6 +48,7 @@ jobs:
     - name: Flet Build IPA
       run: |
         flutter config --no-analytics
+        flutter pub get
         flet build ipa --verbose --build-number=$BUILD_NUMBER --build-version=$BUILD_VERSION --include-packages flet_audio
 
     - name: Upload IPA Artifact
