@@ -45,15 +45,22 @@ jobs:
       with:
         flutter-version: ${{ env.FLUTTER_VERSION }}
 
+    - name: Install CocoaPods Dependencies
+      run: |
+        flutter pub get
+        cd ios
+        pod install
+        cd ..
+
     - name: Flet Build IPA
       run: |
         flutter config --no-analytics
         flet build ipa --verbose --build-number=$BUILD_NUMBER --build-version=$BUILD_VERSION --include-packages flet_audio
 
     - name: Upload IPA Artifact
-      uses: actions/upload-artifact@v4.3.4  # https://github.com/marketplace/actions/upload-a-build-artifact
+      uses: actions/upload-artifact@v4.3.4
       with:
-        name: ipa-build-artifact  # the name of the artifact
-        path: build/ipa  # location of Flet build output
-        if-no-files-found: error  # Fail the action with an error message if no files are found
-        overwrite: false  # If true, an artifact with a matching name will be deleted before a new one is uploaded. If false, the action will fail if an artifact for the given name already exists. Does not fail if the artifact does not exist.
+        name: ipa-build-artifact
+        path: build/ipa  # Make sure this path matches where the .ipa file is generated
+        if-no-files-found: error
+        overwrite: false
