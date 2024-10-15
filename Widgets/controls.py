@@ -12,6 +12,59 @@ from io import BytesIO
 import flet.canvas as cv
 from collections import namedtuple
 
+class TabFederacionFranquicias(ft.Tab):
+
+    franquicias = [
+        {"tipo": "Auto", "porcentaje": "1%", "Monto": "$300.000"},
+        {"tipo": "Auto", "porcentaje": "2%", "Monto": "$400.000"},
+        {"tipo": "Auto", "porcentaje": "4%", "Monto": "$500.000"},
+        {"tipo": "Auto", "porcentaje": "6%", "Monto": "$630.000"},
+        {"tipo": "Camiones", "porcentaje": "2%", "Monto": "$1.150.000"},
+        {"tipo": "Acoplados", "porcentaje": "2%", "Monto": "$870.000"},
+    ]
+
+
+    def __init__(self):
+        super().__init__()
+        self.text = "Franquicias"
+        self.mi_data_table = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text(expand=True,value="Tipo de Vehículo", weight=ft.FontWeight.BOLD), tooltip="Tipo de Vehículo"),
+                ft.DataColumn(ft.Text(expand=True,value="% Suma Asegurada", weight=ft.FontWeight.BOLD), tooltip="% Suma Asegurada"),
+                ft.DataColumn(ft.Text(expand=True,value="Monto mínimo de Franquicia", weight=ft.FontWeight.BOLD), tooltip="Monto mínimo de Franquicia"),
+            ],
+            rows=[],
+            expand=True,
+        )
+
+        for i, franquicia in enumerate(self.franquicias):
+            self.mi_data_table.rows.append(
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(Zoomtainer(ft.Text(franquicia["tipo"], weight=ft.FontWeight.BOLD), zoom=1.5)),
+                        ft.DataCell(Zoomtainer(ft.Text(franquicia["porcentaje"]), zoom=1.5)),
+                        ft.DataCell(Zoomtainer(ft.Text(franquicia["Monto"]), zoom=1.5)),
+                    ],
+                    color=ft.colors.BLACK12 if i % 2 == 0 else None
+                )
+            )
+        self.expand = True
+        self.content = ft.Column(
+            controls=[
+                ft.Container(height=5),
+                ft.Container(
+                    self.mi_data_table,
+                    border_radius=10,
+                    border=ft.border.all(1, ft.colors.BLACK12),
+                    bgcolor=ft.colors.PRIMARY_CONTAINER
+                )
+            ],
+            spacing=0,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            scroll="auto",
+            expand=True
+        )
+
 class Zoomtainer(ft.Container):
 
 
@@ -88,11 +141,12 @@ class CalculadoraPremio(ft.Container):
         self.copy_sound.play()
         
         self.page.set_clipboard(str(self.copy_value))
-        self.sb_copiado.open = True
+        self.page.open(self.sb_copiado)
         self.page.update()
 
     def did_mount(self):
-        self.page.overlay.append(self.sb_copiado)
+        # self.page.overlay.append(self.sb_copiado)
+        
         self.page.overlay.append(self.sonido)
         self.page.overlay.append(self.copy_sound)
         self.page.update()
@@ -349,6 +403,7 @@ class ChatBot(ft.Container):
             bot_header_border_color = ft.colors.PRIMARY,
             bot_chat_bgcolor = ft.colors.SECONDARY_CONTAINER,
             bot_chat_border_color = ft.colors.SECONDARY,
+            font_family=None,
         ):
         super().__init__()
         genai.configure(api_key=token)
@@ -375,6 +430,7 @@ class ChatBot(ft.Container):
         self.selected_image = None
         self.pil_image = None
         self.bot_message_container = None
+        self.font_family = font_family
         self.expand = True
         # self.on_click = self.disable_keyboard
                 # Initialize COM for pyttsx3
@@ -501,6 +557,7 @@ class ChatBot(ft.Container):
                         selectable=True,
                         extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
                         on_tap_link=lambda e: self.page.launch_url(e.data),
+                        code_style_sheet=ft.TextStyle(font_family=self.font_family) if self.font_family else None,
                         code_theme=ft.MarkdownCodeTheme.OCEAN,
                         expand=True,
                     ),
@@ -595,12 +652,26 @@ class ChatBot(ft.Container):
         self.row_opciones.update()
 
     def init_container(self):
+        
+        def close_keyboard(e):
+            print("funciona")
+            self.tf_entrada.disabled = True
+            self.tf_entrada.update()
+            time.sleep(0.01)
+            self.tf_entrada.disabled = False
+            self.tf_entrada.update()
         self.tf_entrada = ft.TextField(
             label=self.tf_label,
             autofocus=True,
             on_submit=self.tf_submit,
             expand=True,
             on_change=self.tf_change,
+            suffix=ft.IconButton(
+                ft.icons.KEYBOARD_ARROW_DOWN,
+                on_click=close_keyboard,
+                padding=0,
+                height=40,
+            ),
             content_padding=5,
             height=40,
             multiline=True
@@ -684,6 +755,12 @@ class ChatBot(ft.Container):
         if self.autoload:
             self.load_history()
 
+
+    def will_unmount(self):
+        print("desmontado")
+        self.working = False
+        return super().will_unmount()
+
     def show_response(self):
         self.bot_message_container.visible = True
         self.bot_message_container.update()
@@ -701,6 +778,7 @@ class ChatBot(ft.Container):
         self.md_response = ft.Markdown(
             "",
             selectable=True,
+            code_style_sheet=ft.TextStyle(font_family=self.font_family) if self.font_family else None,
             extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
             on_tap_link=lambda e: self.page.launch_url(e.data),
             code_theme=ft.MarkdownCodeTheme.OCEAN,
@@ -793,18 +871,31 @@ class ChatBot(ft.Container):
                     # self.show_response()
                     threading.Thread(target=self.show_response).start()
                 try:
+                    self.working = True
+                    self.finalizado = False
                     for letter in chunk.text:
                         # print(letter)
-                        self.md_response.value += letter # chunk.text
-                        self.md_response.update()
+                        if self.working and not self.finalizado:
+                            self.md_response.value += letter # chunk.text
+                            self.md_response.update()
                 except Exception as e:
-                    last_send, last_received = self.chat.rewind()
-                    print("puto error")
+                    try:
+                        last_send, last_received = self.chat.rewind()
+                    except:
+                        try:
+                            self.response.resolve()
+                        except:
+                            print("puto error 0 de 2")
+                        print("puto error 1 de 2")
+                    print("puto error 2 de 2")
                     # self.md_response.value = self.response.text # chunk.text
                     # self.md_response.update()
                     # self.send_message(message)
-                self.columna_principal.scroll_to(offset=0, curve=ft.AnimationCurve.FAST_OUT_SLOWIN, duration=100)
-            
+                if self.working:
+                    self.columna_principal.scroll_to(offset=0, curve=ft.AnimationCurve.FAST_OUT_SLOWIN, duration=100)
+            self.response = None
+            self.working = False
+            self.finalizado = False
         def save_then_play():
             if os.path.exists("bot.mp3"):
                 os.remove("bot.mp3")
@@ -884,3 +975,85 @@ class ChatBot(ft.Container):
 
         with open(self.json_path, 'w') as f:
             json.dump(chat_history_serializable, f, indent=4)
+
+
+class TabGeneralPatentes(ft.Tab):
+
+    patentes = {
+        "AG450AA": "Enero 2024",
+        "AG300AA": "Octubre 2023",
+        "AG000AA": "Mayo 2023",
+        "AF770AA": "Enero 2023",
+        "AF600AA": "Octubre 2022",
+        "AF000AA": "Agosto 2021",
+        "AE600AA": "Enero 2021",
+        "AE100AA": "Enero 2020",
+        "AE000AA": "Octubre 2019",
+        "AD400AA": "Enero 2019",
+        "AD000AA": "Julio 2018",
+        "AC200AA": "Enero 2018",
+        "AC000AA": "Noviembre 2017",
+        "AB000AA": "Febrero 2017",
+        "AA900AA": "Enero 2017",
+        "AA000AA": "Abril 2016",
+        "PMA000": "2016",
+        "ONA000": "2015",
+        "NMA000": "2014",
+        "MBA000": "2013",
+        "KUA000": "2012",
+        "JNA000": "2011",
+        "IMA000": "2010",
+        "HTA000": "2009",
+        "GVA000": "2008",
+        "GBA000": "2007",
+        "FIA000": "2006",
+        "ETA000": "2005",
+        "EIA000": "2004",
+        "EDA000": "2003",
+        "DXA000": "2002",
+        "DOA000": "2001",
+        "DCA000": "2000",
+        "CMA000": "1999",
+        "BUA000": "1998",
+        "BDA000": "1997",
+        "APA000": "1996",
+        "AAA000": "1995",
+    }
+
+    def __init__(self):
+        super().__init__()
+        self.text = "Año de auto por patente"
+        self.mi_data_table = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("Patente", weight=ft.FontWeight.BOLD), tooltip="Patente"),
+                ft.DataColumn(ft.Text("Año", weight=ft.FontWeight.BOLD), tooltip="Año"),
+            ],
+            rows=[],
+        )
+        for i, patente in enumerate(self.patentes):
+            self.mi_data_table.rows.append(
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(Zoomtainer(ft.Text(patente, weight=ft.FontWeight.BOLD), zoom=1.2)),
+                        ft.DataCell(Zoomtainer(ft.Text(self.patentes[patente]), zoom=1.2)),
+                    ],
+                    color=ft.colors.BLACK12 if i % 2 == 0 else None
+                )
+            )
+
+        self.expand = True
+        self.content = ft.Column(
+            controls=[
+                ft.Container(height=5),
+                ft.Container(
+                    self.mi_data_table,
+                    border_radius=10,
+                    border=ft.border.all(1, ft.colors.BLACK12),
+                    bgcolor=ft.colors.PRIMARY_CONTAINER
+                )
+            ],
+            spacing=0,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            scroll="auto",
+            expand=True
+        )

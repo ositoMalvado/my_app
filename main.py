@@ -1,12 +1,11 @@
-import asyncio
 import flet as ft
 from Widgets.controls import *
-
+from Widgets.funcs import *
 class NavigationApp:
 
     def cambiar_destino(self, e: ft.OptionalEventCallable):
-        self.page.controls = self.pages[int(e.data)]
-        self.page.update()
+        self.animation_switcher.content = self.pages[int(e.data)]
+        self.animation_switcher.update()
 
     def __init__(self,
             page: ft.Page,
@@ -18,14 +17,37 @@ class NavigationApp:
             destinations=self.destinations,
             on_change=self.cambiar_destino,
         )
-        self.pages = pages
-
-        self.page.controls = self.pages[0]
+        self.pages = [
+            ft.Column(
+                expand=True,
+                controls=page,
+            )
+            for page in pages
+        ]
+        self.columna_main = self.pages[0]
+        self.animation_switcher = ft.AnimatedSwitcher(
+            ft.Container(expand=True, content=self.columna_main),
+            expand=True,
+            transition=ft.AnimatedSwitcherTransition.SCALE,
+            duration=100,
+            reverse_duration=10,
+        )
+        self.page.add(ft.SafeArea(
+            expand=True,
+            content=self.animation_switcher
+        ))
         self.page.update()
 
 
 
 def main(page: ft.Page):
+    page.fonts = {
+        "GasoekOne": github_to_raw("https://github.com/chrisbull/font-collection/blob/master/Dank%20Mono/DankMono-Regular.ttf")
+    }
+
+    page.theme = ft.Theme(font_family="GasoekOne")
+    page.title = "Utilidades Oficina"
+    page.theme_mode = ft.ThemeMode.LIGHT
     page.bgcolor = ft.colors.BACKGROUND
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.theme = ft.Theme(
@@ -38,9 +60,24 @@ def main(page: ft.Page):
             [
                 ft.Container(content=CalculadoraPremio())
             ],
-            # [
-            #     ft.Container(content=ft.Text("FED"))
-            # ],
+            [
+                ft.Container(content=ft.Tabs(
+                    [
+                        TabFederacionFranquicias(),
+                    ],
+                    tab_alignment=ft.TabAlignment.CENTER,
+                    expand=True
+                ))
+            ],
+            [
+                ft.Container(content=ft.Tabs(
+                    [
+                        TabGeneralPatentes(),
+                    ],
+                    tab_alignment=ft.TabAlignment.CENTER,
+                    expand=True
+                ))
+            ],
             # [
             #     ft.Container(content=ft.Text("123"))
             # ],
@@ -61,6 +98,7 @@ def main(page: ft.Page):
                                     user_name="Usuario",
                                     json_path=f"chat_history.json",
                                     autofocus=False,
+                                    font_family="GasoekOne"
                                 ),
                             ],
                             expand=True,
@@ -73,9 +111,10 @@ def main(page: ft.Page):
         ],
         destinations=[
             ft.NavigationBarDestination(icon=ft.icons.MENU, label="RUS"),
-            # ft.NavigationBarDestination(icon=ft.icons.MENU, label="FED"),
+            ft.NavigationBarDestination(icon=ft.icons.MENU, label="FED"),
+            ft.NavigationBarDestination(icon=ft.icons.MENU, label="GENERAL"),
             # ft.NavigationBarDestination(icon=ft.icons.MENU, label="123"),
-            ft.NavigationBarDestination(icon=ft.icons.MENU, label="XCV"),
+            ft.NavigationBarDestination(icon=ft.icons.MENU, label="CHATBOT"),
         ],
     )
 
