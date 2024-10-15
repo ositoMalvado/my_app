@@ -90,19 +90,6 @@ def main(page: ft.Page):
                                 ColorButton(),
                             ],
                         ),
-                        ft.Column(
-                            [
-                                ChatBot(
-                                    token="AIzaSyCTpmY_rKZLlWc-AnnyjUqbj5SHrfG3NWo",
-                                    bot_name=f"ChatBot",
-                                    user_name="Usuario",
-                                    json_path=f"chat_history.json",
-                                    autofocus=False,
-                                    font_family="GasoekOne"
-                                ),
-                            ],
-                            expand=True,
-                        ),
                     ],
                     expand=True
                 ),
@@ -114,7 +101,7 @@ def main(page: ft.Page):
             ft.NavigationBarDestination(icon=ft.icons.MENU, label="FED"),
             ft.NavigationBarDestination(icon=ft.icons.MENU, label="GENERAL"),
             # ft.NavigationBarDestination(icon=ft.icons.MENU, label="123"),
-            ft.NavigationBarDestination(icon=ft.icons.MENU, label="CHATBOT"),
+            ft.NavigationBarDestination(icon=ft.icons.MENU, label="MENÚ"),
         ],
     )
 
