@@ -1,7 +1,43 @@
 import flet as ft
+import time
+
+class Widget(ft.Container):
+
+    def did_mount(self):
+        self.page.run_thread(self.update_time)
+        
+        return super().did_mount()
+    
+    def will_unmount(self):
+        self.working = False
+        return super().will_unmount()
+
+    def update_time(self):
+        self.working = True
+        if self.working:
+            while True:
+                time.sleep(1)
+                self.initial_time += 1
+                self.timer_text.value = str(self.initial_time)
+                self.timer_text.update()
+
+    def __init__(self):
+        super().__init__()
+        self.initial_time = 0
+        self.timer_text = ft.Text(str(self.initial_time))
+        self.content = ft.ListView(
+            [
+                ft.ListTile(
+                    title=self.timer_text,
+                    subtitle=ft.Text("Subtitle 1"),
+                    leading=ft.Icon(ft.icons.PIN_DROP),
+                ),
+            ]
+        )
+import flet as ft
 import math
 import random
-# import google.generativeai as genai
+import google.generativeai as genai
 import json
 import os
 import PIL.Image
@@ -29,9 +65,9 @@ class TabFederacionFranquicias(ft.Tab):
         self.text = "Franquicias"
         self.mi_data_table = ft.DataTable(
             columns=[
-                ft.DataColumn(ft.Text(expand=True,value="Tipo de Vehículo", weight=ft.FontWeight.BOLD), tooltip="Tipo de Vehículo"),
-                ft.DataColumn(ft.Text(expand=True,value="% Suma Asegurada", weight=ft.FontWeight.BOLD), tooltip="% Suma Asegurada"),
-                ft.DataColumn(ft.Text(expand=True,value="Monto mínimo de Franquicia", weight=ft.FontWeight.BOLD), tooltip="Monto mínimo de Franquicia"),
+                ft.DataColumn(ft.Text(expand=True,value="Ramo", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text(expand=True,value="%SA", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text(expand=True,value="Mínimo", weight=ft.FontWeight.BOLD)),
             ],
             rows=[],
             expand=True,
@@ -85,12 +121,35 @@ class Zoomtainer(ft.Container):
 class CalculadoraPremio(ft.Container):
 
 
+    def hide_keyboard(self,e ):
+        
+        self.text_field_premio.disabled = True
+        self.text_field_premio.update()
+        time.sleep(0.01)
+        self.page.floating_action_button = None
+        if self.text_field_premio.value == '' or int(self.text_field_premio.value) <= 0:
+            self.boton_copiar.disabled = True
+        self.text_field_premio.disabled = False
+        self.text_field_premio.update()
+        self.boton_copiar.update()
+        self.page.update()
+        self.keyboard = False
+
     def update_premio(self, e):
         # Aplicar el descuento del 15%
+        if not self.keyboard and e.control == self.text_field_premio :
+            self.keyboard = True
+            self.page.floating_action_button = ft.FloatingActionButton(
+                icon=ft.icons.KEYBOARD_HIDE,
+                on_click=self.hide_keyboard
+            )
+            self.page.update()
         self.sonido.play()
         if self.text_field_premio.value == '' or int(self.text_field_premio.value) <= 0:
             self.valor_final.value = "Ingresa un premio"
+            self.premio_display.value = "$0"
             self.boton_copiar.disabled = True
+            self.premio_display.update()
             self.boton_copiar.update()
             # if e.control.data == "descuento":
             #     return
@@ -154,12 +213,12 @@ class CalculadoraPremio(ft.Container):
 
     def __init__(self):
         super().__init__()
-
+        self.keyboard = False
         self.sonido = ft.Audio(src="pop2.mp3")
         self.copy_sound = ft.Audio(src="bubble.mp3")
 
         self.sb_copiado = ft.SnackBar(
-            content=ft.Text("Copiado al portapapeles"),
+            content=ft.Text("Premio copiado"),
             bgcolor=ft.colors.GREEN,
             duration=800
         )
@@ -186,6 +245,8 @@ class CalculadoraPremio(ft.Container):
             height=40,
             content_padding=5,
             on_change=self.update_premio,
+            keyboard_type=ft.KeyboardType.NUMBER,
+            on_focus=self.update_premio,
             input_filter = ft.NumbersOnlyInputFilter()
         )
         self.boton_copiar = ft.ElevatedButton(
@@ -233,6 +294,15 @@ class CalculadoraPremio(ft.Container):
             controls=[
                 ft.Text("Calculadora de Premio", weight=ft.FontWeight.BOLD, expand=True),
                 self.text_field_premio,
+                
+                ft.Row(
+                    [
+                        ft.Text("Premio con descuento: ", weight=ft.FontWeight.BOLD),
+                        self.premio_display,
+                    ],
+                    expand=True
+                ),
+                self.boton_copiar,
                 ft.Row(
                     [
                         ft.Text("Descuento: ", weight=ft.FontWeight.BOLD),
@@ -258,14 +328,6 @@ class CalculadoraPremio(ft.Container):
                 ),
                 self.cuotas_slider,
                 
-                ft.Row(
-                    [
-                        ft.Text("Premio con descuento: ", weight=ft.FontWeight.BOLD),
-                        self.premio_display,
-                    ],
-                    expand=True
-                ),
-                self.boton_copiar
             ],
             spacing=2,
             expand=True
@@ -320,65 +382,6 @@ class ThemeButton(ft.IconButton):
 
 # import pythoncom  # Import pythoncom
 
-class ResponsiveControl(cv.Canvas):
-    def __init__(self, content=None, resize_interval=10000, on_resize=None, expand=1, padding: ft.padding = 0, margin: ft.margin = 0, debug: str = False, **kwargs):
-        super().__init__(**kwargs)
-        self.content = ft.Container(
-            content=content,
-            padding=5 if debug else padding,
-            alignment=ft.alignment.center,
-            margin=5 if debug else margin,
-            bgcolor=ft.colors.with_opacity(0.2, debug) if debug else None,
-            border=ft.border.all(1, debug) if debug else None,
-        )
-        self.expand = expand
-        self.resize_interval = resize_interval
-        self.resize_callback = on_resize
-        self.on_resize = self.__handle_canvas_resize
-        self.size = namedtuple("size", ["width", "height"], defaults=[0, 0])
-
-    def __handle_canvas_resize(self, e):
-        """
-        Called every resize_interval when the canvas is resized.
-        If a resize_callback was given, it is called.
-        """
-        # print(e.data)
-        pass
-
-    def set_size(self):
-        time.sleep(0.5)
-        self.page.window.width = self.page.window.width + 1
-        self.page.update()
-        self.page.window.width = self.page.window.width - 1
-        self.page.update()
-        # print(f"Initial size after mount is [w={self.width}, h={self.height}]")
-
-    def did_mount(self):
-        self.page.run_thread(self.set_size)
-        return super().did_mount()
-
-
-class ResponsiveRow(ft.Row):
-    def __init__(self, controls: list=[], expands: list=[], debug: str=False, expand: bool=True, **kwargs):
-        super().__init__(**kwargs)
-        self.expands = expands if expands else [1] * len(controls)
-        self.controls = [
-            ResponsiveControl(content=control, expand=self.expands[i], debug=debug)
-            for i, control in enumerate(controls)
-        ]
-        self.expand = expand
-        self.spacing = 0    
-
-class ResponsiveColumn(ft.Column):
-    def __init__(self, controls: list=[], expands: list=[], debug: str=False, expand: bool=True, **kwargs):
-        super().__init__(**kwargs)
-        self.expands = expands if expands else [1] * len(controls)
-        self.controls = [
-            ResponsiveControl(content=control, expand=self.expands[i], debug=debug)
-            for i, control in enumerate(controls)
-        ]
-        self.expand = expand
-        self.spacing = 0
 
 class TabGeneralPatentes(ft.Tab):
 
@@ -428,8 +431,8 @@ class TabGeneralPatentes(ft.Tab):
         self.text = "Año de auto por patente"
         self.mi_data_table = ft.DataTable(
             columns=[
-                ft.DataColumn(ft.Text("Patente", weight=ft.FontWeight.BOLD), tooltip="Patente"),
-                ft.DataColumn(ft.Text("Año", weight=ft.FontWeight.BOLD), tooltip="Año"),
+                ft.DataColumn(ft.Text("Patente", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Año", weight=ft.FontWeight.BOLD)),
             ],
             rows=[],
         )
