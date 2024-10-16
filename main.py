@@ -5,6 +5,12 @@ import time
 def main(page: ft.Page):
     page.spacing = 0
     page.padding = 0
+    page.title = "Utilidades"
+    page.theme_mode = ft.ThemeMode.DARK
+    page.locale_configuration = ft.LocaleConfiguration(
+        [ft.Locale('es', 'ES')],
+        current_locale=ft.Locale('es', 'ES'),
+    )
     page.bgcolor = ft.colors.BACKGROUND
     last_width, last_height = calcular_alto(414)
     resizing = False
@@ -39,7 +45,17 @@ def main(page: ft.Page):
                 text="RUS",
                 content=ft.Container(
                     expand=True,
-                    content=CalculadoraPremio()
+                    content=ft.Tabs(
+                        [
+                            ft.Tab(
+                                text="Premio",
+                                content=CalculadoraPremio()
+                            )
+                        ],
+                        tab_alignment=ft.TabAlignment.CENTER,
+                        expand=True
+                    ),
+
                 )
             ),
             ft.Tab(

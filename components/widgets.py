@@ -123,14 +123,14 @@ class CalculadoraPremio(ft.Container):
 
     def update_premio(self, e):
         # Aplicar el descuento del 15%
-        if not self.keyboard and e.control == self.text_field_premio :
-            self.keyboard = True
-            self.page.floating_action_button = ft.FloatingActionButton(
-                icon=ft.icons.KEYBOARD_HIDE,
-                on_click=self.hide_keyboard
-            )
-            self.page.update()
-        self.sonido.play()
+        # if not self.keyboard and e.control == self.text_field_premio :
+        #     self.keyboard = True
+        #     self.page.floating_action_button = ft.FloatingActionButton(
+        #         icon=ft.icons.KEYBOARD_HIDE,
+        #         on_click=self.hide_keyboard
+        #     )
+        #     self.page.update()
+        
         if self.text_field_premio.value == '' or int(self.text_field_premio.value) <= 0:
             self.valor_final.value = "Ingresa un premio"
             self.premio_display.value = "$0"
@@ -149,7 +149,7 @@ class CalculadoraPremio(ft.Container):
         self.cuotas_display.update()
         if self.text_field_premio.value == '':
             return
-
+        self.sonido.play()
         discounted_value = int(float(self.text_field_premio.value) * (1 - self.descuento / 100))
         
         intervalo = int(self.intervalo_slider.value)
@@ -321,7 +321,7 @@ class CalculadoraPremio(ft.Container):
         self.border_radius=10
         self.border=ft.border.all(1, ft.colors.BLACK12)
         self.bgcolor=ft.colors.PRIMARY_CONTAINER
-        self.width=500
+        self.width=400
         self.padding=10
 
 

@@ -1,0 +1,24 @@
+[project]
+name = "Oficina"
+version = "1.0.0"
+description = "Utilidades para la Oficina"
+authors = [
+    {name = "Julián Perez", email = "mordecaaii@gmail.com"}
+]
+dependencies = [
+    "flet==0.25.0.dev3526"
+]
+
+[tool.flet]
+org = "pj.code"
+product = "Oficina"
+company = "PAS Toval"
+copyright = "Copyright (C) 2024 by Julian Perez"
+build_number = 1
+
+[tool.flet.splash]
+color = "#2f2f2f"
+dark_color = "#2f2f2f"
+web = true
+ios = true
+android = true
