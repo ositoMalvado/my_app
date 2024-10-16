@@ -1,6 +1,5 @@
 import flet as ft
-import time
-
+import time, math, random
 class Widget(ft.Container):
 
     def did_mount(self):
@@ -34,19 +33,6 @@ class Widget(ft.Container):
                 ),
             ]
         )
-import flet as ft
-import math
-import random
-import google.generativeai as genai
-import json
-import os
-import PIL.Image
-import time
-import threading
-import base64
-from io import BytesIO
-import flet.canvas as cv
-from collections import namedtuple
 
 class TabFederacionFranquicias(ft.Tab):
 
