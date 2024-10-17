@@ -1,5 +1,147 @@
 import flet as ft
 import time, math, random
+
+
+class Billetes(ft.Container):
+    billetes = [
+        10, 20, 50, 100, 200, 500, 1000, 2000, 10000
+    ]
+
+    def update_total(self):
+        total = 0
+        for billete in self.billetes:
+            if self.text_fields[billete].value:
+                total += int(self.text_fields[billete].value) * billete
+            self.total_final.value = f"Total: ${str(total)}"
+            self.total_final.update()
+            if total > 0:
+                self.clear_all_button.visible = True
+                self.clear_all_button.update()
+            else:
+                self.clear_all_button.visible = False
+                self.clear_all_button.update()
+
+    def on_change_billete(self, e):
+        valor = int(e.control.data)
+        if not e.control.value:
+            self.totales[valor].value = f"= $0"
+            self.totales[valor].update()
+            self.update_total()
+            return
+        cantidad = int(e.control.value)
+        self.totales[valor].value = f"= ${str(int(cantidad * valor))}"
+        self.totales[valor].update()
+        self.update_total()
+
+    def clear_all_tf(self, e):
+        for billete in self.billetes:
+            self.text_fields[billete].value = ""
+            self.totales[billete].value = f"= $0"
+            self.text_fields[billete].update()
+            self.totales[billete].update()
+        self.update_total()
+
+    def clear_tf(self, e):
+        self.text_fields[int(e.control.data)].value = ""
+        self.totales[int(e.control.data)].value = f"= $0"
+        self.text_fields[int(e.control.data)].update()
+        self.totales[int(e.control.data)].update()
+        self.update_total()
+
+    def __init__(self):
+        super().__init__()
+        self.totales = {
+            billete: ft.Text("= $0", width=100, size=16)
+            for billete in self.billetes
+        }
+        self.total_final = ft.Text("Total: $0", size=24, weight=ft.FontWeight.BOLD)
+        self.text_fields = {
+            billete: ft.TextField(label=f"", height=40, content_padding=3, input_filter=ft.NumbersOnlyInputFilter(),
+            on_change=self.on_change_billete,
+            data=str(billete),
+            width=80,
+            expand=True,
+            keyboard_type=ft.KeyboardType.NUMBER,
+            suffix=ft.Container(
+                padding=ft.padding.only(right=5),
+                content=ft.IconButton(
+                    ft.icons.CLEAR,
+                    on_click=self.clear_tf,
+                    data=str(billete),
+                    padding=0,
+                    icon_size=15,
+                    width=20,
+                    height=20,
+                )
+            )
+            )
+            for billete in self.billetes
+        }
+        self.clear_all_button = ft.IconButton(
+            ft.icons.CLEAR_ALL,
+            on_click=self.clear_all_tf,
+            visible=False
+        )
+        self.content = ft.Column(
+            [
+                ft.Stack(
+                    [
+                        ft.Row(
+                            [
+                                self.total_final,
+                            ],
+                            alignment=ft.MainAxisAlignment.CENTER,
+                        ),
+                        ft.Row(
+                            [
+                                self.clear_all_button
+                            ],
+                            alignment=ft.MainAxisAlignment.END,
+                        )
+                    ],
+                ),
+                ft.Column(
+                    [
+                        ft.ListView(
+                            [
+                                ft.ListTile(
+                                    leading=ft.Row(
+                                        [
+                                            ft.Row(
+                                                [
+                                                    ft.Icon(ft.icons.ATTACH_MONEY),
+                                                    ft.Text(f"{billete}", size=20, weight=ft.FontWeight.BOLD)
+                                                ],
+                                                width=120
+                                            ),
+                                            ft.Row(
+                                                [
+                                                    ft.Text("x", size=20, weight=ft.FontWeight.BOLD),
+                                                    ft.Container(
+                                                        self.text_fields[billete],
+                                                        padding=ft.padding.only(left=10, right=10)
+                                                    ),
+                                                    self.totales[billete]
+                                                ],
+                                                expand=True,
+                                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+                                            )
+                                        ],
+                                        spacing=0,
+                                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                    ),
+                                    content_padding=0,
+                                )
+                                for billete in self.billetes
+                            ]
+                        )
+                    ],
+                    expand=True,
+                    scroll="auto"
+                )
+            ]
+        )
+
 class Widget(ft.Container):
 
     def did_mount(self):
@@ -108,7 +250,8 @@ class CalculadoraPremio(ft.Container):
 
 
     def hide_keyboard(self,e ):
-        
+        if not self.page.platform == ft.PagePlatform.IOS:
+            return
         self.text_field_premio.disabled = True
         self.text_field_premio.update()
         time.sleep(0.01)
@@ -122,25 +265,13 @@ class CalculadoraPremio(ft.Container):
         self.keyboard = False
 
     def update_premio(self, e):
-        # Aplicar el descuento del 15%
-        # if not self.keyboard and e.control == self.text_field_premio :
-        #     self.keyboard = True
-        #     self.page.floating_action_button = ft.FloatingActionButton(
-        #         icon=ft.icons.KEYBOARD_HIDE,
-        #         on_click=self.hide_keyboard
-        #     )
-        #     self.page.update()
-        
         if self.text_field_premio.value == '' or int(self.text_field_premio.value) <= 0:
             self.valor_final.value = "Ingresa un premio"
             self.premio_display.value = "$0"
             self.boton_copiar.disabled = True
             self.premio_display.update()
             self.boton_copiar.update()
-            # if e.control.data == "descuento":
-            #     return
         else:
-            # return
             self.boton_copiar.disabled = False
             self.boton_copiar.update()
         self.intervalo_display.value = "$" + str(int(self.intervalo_slider.value))
@@ -153,10 +284,10 @@ class CalculadoraPremio(ft.Container):
         discounted_value = int(float(self.text_field_premio.value) * (1 - self.descuento / 100))
         
         intervalo = int(self.intervalo_slider.value)
-        # Redondear al múltiplo de 300 más cercano, siempre hacia arriba
+        
         rounded_value = int(math.ceil(discounted_value / intervalo) * intervalo)
 
-        # Asegurarse de que el valor redondeado no sea menor que el valor descontado
+        
         final_value = max(rounded_value, math.ceil(discounted_value))
         self.copy_value = final_value
         self.premio_display.value = "$" + str(int(final_value))
@@ -190,7 +321,7 @@ class CalculadoraPremio(ft.Container):
         self.page.update()
 
     def did_mount(self):
-        # self.page.overlay.append(self.sb_copiado)
+        
         
         self.page.overlay.append(self.sonido)
         self.page.overlay.append(self.copy_sound)
@@ -255,7 +386,7 @@ class CalculadoraPremio(ft.Container):
             value=self.intervalo,
             min=50,
             max=1000,
-            divisions=19, # i need each division be by 50
+            divisions=19, 
             on_change=self.slider_handle,
             label="Intervalo: 300",
             data="intervalo"
@@ -274,8 +405,7 @@ class CalculadoraPremio(ft.Container):
             label="Cuotas: " + str(self.cuotas),
             data="cuotas"
         )
-
-        self.content = ft.Column(
+        pointer = ft.Column(
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 ft.Text("Calculadora de Premio", weight=ft.FontWeight.BOLD, expand=True),
@@ -317,6 +447,19 @@ class CalculadoraPremio(ft.Container):
             ],
             spacing=2,
             expand=True
+        )
+        if False:
+            pointer = ft.TransparentPointer(
+                content=pointer
+            )
+        self.content = ft.Stack(
+            expand=True,
+            controls=[
+                ft.GestureDetector(
+                    on_double_tap=lambda _: self.hide_keyboard(None),
+                ),
+                pointer
+            ]
         )
         self.border_radius=10
         self.border=ft.border.all(1, ft.colors.BLACK12)
@@ -366,7 +509,7 @@ class ThemeButton(ft.IconButton):
         self.on_click = self.change_theme
 
 
-# import pythoncom  # Import pythoncom
+
 
 
 class TabGeneralPatentes(ft.Tab):
@@ -414,7 +557,7 @@ class TabGeneralPatentes(ft.Tab):
 
     def __init__(self):
         super().__init__()
-        self.text = "Año de auto por patente"
+        self.text = "Año patente"
         self.mi_data_table = ft.DataTable(
             columns=[
                 ft.DataColumn(ft.Text("Patente", weight=ft.FontWeight.BOLD)),

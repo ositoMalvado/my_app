@@ -34,13 +34,26 @@ def main(page: ft.Page):
     def on_resize(e):
         page.run_thread(resize_task)
     page.on_resized = on_resize
-    page.window.width, page.window.height = calcular_alto(200)
+    page.window.width, page.window.height = calcular_alto(380)
     page.window.always_on_top = True
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
 
     tabs = ft.Tabs(
         [
+            # ft.Tab(
+            #     text="TEST",
+            #     content=ft.Container(
+            #         expand=True,
+            #         content=ft.Tabs(
+            #             [
+            #             ],
+            #             tab_alignment=ft.TabAlignment.CENTER,
+            #             expand=True
+            #         ),
+
+            #     )
+            # ),
             ft.Tab(
                 text="RUS",
                 content=ft.Container(
@@ -65,6 +78,10 @@ def main(page: ft.Page):
                         [
                             TabGeneralPatentes(),
                             TabFederacionFranquicias(),
+                            ft.Tab(
+                                text="Premio",
+                                content=Billetes()
+                            )
                         ],
                         tab_alignment=ft.TabAlignment.CENTER,
                         expand=True
