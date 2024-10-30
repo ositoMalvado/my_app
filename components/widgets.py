@@ -16,10 +16,14 @@ class Billetes(ft.Container):
             self.total_final.update()
             if total > 0:
                 self.clear_all_button.visible = True
+                self.send_button.visible = True
                 self.clear_all_button.update()
+                self.send_button.update()
             else:
                 self.clear_all_button.visible = False
+                self.send_button.visible = False
                 self.clear_all_button.update()
+                self.send_button.update()
 
     def on_change_billete(self, e):
         valor = int(e.control.data)
@@ -48,13 +52,37 @@ class Billetes(ft.Container):
         self.totales[int(e.control.data)].update()
         self.update_total()
 
+
+    def send_total(self, e):
+        total = 0
+        for billete in self.billetes:
+            if self.text_fields[billete].value:
+                total += int(self.text_fields[billete].value) * billete
+        self.page.launch_url(f"whatsapp://send?phone=2994516661&text=Total en efectivo: ${total}")
+
+
+    def close_keyboard(self, e):
+        for billete in self.billetes:
+            self.text_fields[billete].disabled = True
+        self.update()
+        for billete in self.billetes:
+            self.text_fields[billete].disabled = False
+        self.update()
+        
+
     def __init__(self):
         super().__init__()
+        self.padding = 20
+        self.border_radius = 10
+        self.margin = 20
+        self.bgcolor = ft.colors.SURFACE_VARIANT
+        # self.bgcolor = ft.colors.PRIMARY_CONTAINER
         self.totales = {
             billete: ft.Text("= $0", width=100, size=16)
             for billete in self.billetes
         }
         self.total_final = ft.Text("Total: $0", size=24, weight=ft.FontWeight.BOLD)
+        
         self.text_fields = {
             billete: ft.TextField(label=f"", height=40, content_padding=3, input_filter=ft.NumbersOnlyInputFilter(),
             on_change=self.on_change_billete,
@@ -77,69 +105,78 @@ class Billetes(ft.Container):
             )
             for billete in self.billetes
         }
+        self.send_button = ft.IconButton(
+            ft.icons.SEND,
+            on_click=self.send_total,
+            visible=False
+        )
         self.clear_all_button = ft.IconButton(
             ft.icons.CLEAR_ALL,
             on_click=self.clear_all_tf,
             visible=False
         )
-        self.content = ft.Column(
-            [
-                ft.Stack(
-                    [
-                        ft.Row(
-                            [
-                                self.total_final,
-                            ],
-                            alignment=ft.MainAxisAlignment.CENTER,
-                        ),
-                        ft.Row(
-                            [
-                                self.clear_all_button
-                            ],
-                            alignment=ft.MainAxisAlignment.END,
-                        )
-                    ],
-                ),
-                ft.Column(
-                    [
-                        ft.ListView(
-                            [
-                                ft.ListTile(
-                                    leading=ft.Row(
-                                        [
-                                            ft.Row(
-                                                [
-                                                    ft.Icon(ft.icons.ATTACH_MONEY),
-                                                    ft.Text(f"{billete}", size=20, weight=ft.FontWeight.BOLD)
-                                                ],
-                                                width=120
-                                            ),
-                                            ft.Row(
-                                                [
-                                                    ft.Text("x", size=20, weight=ft.FontWeight.BOLD),
-                                                    ft.Container(
-                                                        self.text_fields[billete],
-                                                        padding=ft.padding.only(left=10, right=10)
-                                                    ),
-                                                    self.totales[billete]
-                                                ],
-                                                expand=True,
-                                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN
-                                            )
-                                        ],
-                                        spacing=0,
-                                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                    ),
-                                    content_padding=0,
-                                )
-                                for billete in self.billetes
-                            ]
-                        )
-                    ],
-                    expand=True,
-                    scroll="auto"
-                )
-            ]
+        self.content = ft.GestureDetector(
+            on_tap=self.close_keyboard,
+            content=ft.Column(
+                [
+                    ft.Stack(
+                        [
+                            ft.Row(
+                                [
+                                    self.total_final,
+                                ],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                            ),
+                            ft.Row(
+                                [
+                                    self.clear_all_button,
+                                    self.send_button
+                                ],
+                                alignment=ft.MainAxisAlignment.END,
+                            )
+                        ],
+                    ),
+                    ft.Column(
+                        [
+                            ft.ListView(
+                                [
+                                    ft.ListTile(
+                                        leading=ft.Row(
+                                            [
+                                                ft.Row(
+                                                    [
+                                                        ft.Icon(ft.icons.ATTACH_MONEY),
+                                                        ft.Text(f"{billete}", size=20, weight=ft.FontWeight.BOLD)
+                                                    ],
+                                                    width=120
+                                                ),
+                                                ft.Row(
+                                                    [
+                                                        ft.Text("x", size=20, weight=ft.FontWeight.BOLD),
+                                                        ft.Container(
+                                                            self.text_fields[billete],
+                                                            padding=ft.padding.only(left=10, right=10)
+                                                        ),
+                                                        self.totales[billete]
+                                                    ],
+                                                    expand=True,
+                                                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+                                                )
+                                            ],
+                                            spacing=0,
+                                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                        ),
+                                        content_padding=0,
+                                    )
+                                    for billete in self.billetes
+                                ]
+                            )
+                        ],
+                        expand=True,
+                        scroll="auto"
+                    )
+                ]
+            ),
         )
 
 class Widget(ft.Container):
@@ -340,6 +377,17 @@ class CalculadoraPremio(ft.Container):
             duration=800
         )
 
+
+
+        self.border_radius=10
+        self.border=ft.border.all(1, ft.colors.BLACK12)
+        self.bgcolor=ft.colors.PRIMARY_CONTAINER
+        self.width=400
+        self.margin = ft.margin.all(10)
+        self.padding=ft.padding.all(10)
+        self.bgcolor=ft.colors.SURFACE_VARIANT
+        self.border_radius=10
+
         self.descuento = 15
         self.copy_value = 0
 
@@ -461,11 +509,6 @@ class CalculadoraPremio(ft.Container):
                 pointer
             ]
         )
-        self.border_radius=10
-        self.border=ft.border.all(1, ft.colors.BLACK12)
-        self.bgcolor=ft.colors.PRIMARY_CONTAINER
-        self.width=400
-        self.padding=10
 
 
 class ColorButton(ft.IconButton):

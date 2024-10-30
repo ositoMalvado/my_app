@@ -65,11 +65,11 @@ class RusContactos(ft.Tabs):
         "Vehículos": {
             "TOTALES": {
                 "Descripción": "Este equipo gestionará integralmente el 100% de los siniestros de Robo Total, Daños Total e Incendio Total Bolsa CRM: Siniestros Automotores - Totales",
-                "Correo": ["siniestrostotales@riouruguay.com"],
+                "Correo": ["siniestrostotales@riouruguay.com.ar"],
             },
             "DAÑOS PARCIALES": {
                 "Descripción": "Este equipo gestionará los casos de, Daños Parciales de Todo Riesgo, Robos, Parciales (no ruedas y baterías), Daños, de Granizo e Incendio Parcial.",
-                "Correo": ["siniestrosparciales@riouruguay.com"],
+                "Correo": ["siniestrosparciales@riouruguay.com.ar"],
             },
             "FAST TRACKAUTOMOTORES": {
                 "Descripción": "Este equipo gestionará reclamos de Daños de Cristales, Cerraduras y Robo de Ruedas y Batería. Bolsa CRM: Siniestros Automotores - Fast Track",
@@ -79,7 +79,7 @@ class RusContactos(ft.Tabs):
         "CLEAS": {
             "TRAMITACIONES": {
                 "Descripción": "Este equipo definira la responsabilidad del 100% de casos ue ingresen a la plataforma CLEAS. Bolsa CRM: Siniestros Automotores - Cleas - Tramitación",
-                "Correo": ["siniestroscleas@riouruguay.com"],
+                "Correo": ["siniestroscleas@riouruguay.com.ar"],
             },
             "CIERRES": {
                 "Descripción": "Este equipo definira la responsabilidad del 100% de casos CLEAS y gestionará los cierres de aquellos trámites definidos a favor de RUS donde la antguedad de los vehículos sea mayor a 15 años. Bolsa CRM: Siniestros Automotores - Cleas - Cierres",
@@ -142,8 +142,8 @@ class RusContactos(ft.Tabs):
     def call_phone(self, phone_number):
         def handle_click(e):
             # whatsapp://send?phone=214324234
-            self.page.launch_url(f"whatsapp://send?phone={phone_number}")
-            # self.page.launch_url(f"tel:{phone_number}")
+            # self.page.launch_url(f"whatsapp://send?phone={phone_number}")
+            self.page.launch_url(f"tel:{phone_number}")
 
         return handle_click
 
@@ -245,7 +245,7 @@ class RusContactos(ft.Tabs):
                                                 height=30,
                                                 icon_size=20,
                                             ),
-                                            bgcolor=ft.colors.BACKGROUND,
+                                            bgcolor=ft.colors.PRIMARY_CONTAINER,
                                             border_radius=100,
                                         ),
                                     ],
@@ -283,9 +283,6 @@ class RusContactos(ft.Tabs):
                 margin=ft.margin.only(bottom=10),
                 bgcolor=ft.colors.SURFACE_VARIANT,
                 border_radius=10,
-                shadow=ft.BoxShadow(
-                    spread_radius=1, blur_radius=5, color=ft.colors.SHADOW
-                ),
             )
             sections.append(section)
 
@@ -385,7 +382,10 @@ class RusContactos(ft.Tabs):
 
         # Configurar las pestañas
         self.tabs = [
-            ft.Tab(text="Premio", content=CalculadoraPremio()),
+            ft.Tab(
+                text="Premio",
+                icon=ft.icons.ATTACH_MONEY,
+                content=CalculadoraPremio()),
             ft.Tab(
                 text="Teléfonos",
                 icon=ft.icons.PHONE,
