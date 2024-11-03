@@ -1,9 +1,558 @@
 import time
-
 import flet as ft
-
 from components.functions import *
 from components.widgets import *
+import os
+import shutil
+import socket
+from typing import Dict
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+import threading
+import webbrowser
+from functools import partial
+
+os.environ["FLET_SECRET_KEY"] = "zxczxczxcSS"
+os.environ["FLET_UPLOAD_DIR"] = "assets/uploads"
+os.environ["FLET_ASSETS_DIR"] = "assets"
+assets_dir = "assets"
+upload_dir = os.path.join(assets_dir, "uploads")
+
+# Ensure upload directory exists
+os.makedirs(upload_dir, exist_ok=True)
+
+def get_local_ip():
+    try:
+        # Crear un socket UDP para obtener la IP local
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "0.0.0.0"  # Fallback a todas las interfaces si no se puede determinar la IP
+
+class CustomHandler(SimpleHTTPRequestHandler):
+    def __init__(self, *args, directory=None, **kwargs):
+        super().__init__(*args, directory=directory, **kwargs)
+
+    def do_GET(self):
+        if self.path == '/':
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(self.generate_html().encode())
+        else:
+            # Manejar el error de favicon.ico
+            if self.path == '/favicon.ico':
+                self.send_response(404)
+                self.end_headers()
+                return
+            super().do_GET()
+
+    def handle_one_request(self):
+        try:
+            super().handle_one_request()
+        except BrokenPipeError:
+            # Ignorar errores de pipe roto
+            pass
+
+    def generate_html(self):
+        files = os.listdir(upload_dir)
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Servidor July</title>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+            <style>
+                :root {{
+                    --primary: #4CAF50;
+                    --primary-dark: #45a049;
+                    --glass-bg: rgba(255, 255, 255, 0.1);
+                    --glass-border: rgba(255, 255, 255, 0.2);
+                }}
+
+                * {{
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                }}
+
+                body {{
+                    min-height: 100vh;
+                    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+                    background-size: 400% 400%;
+                    animation: gradient 15s ease infinite;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    padding: 20px;
+                    color: white;
+                    overflow-x: hidden;
+                }}
+
+                @keyframes gradient {{
+                    0% {{ background-position: 0% 50%; }}
+                    50% {{ background-position: 100% 50%; }}
+                    100% {{ background-position: 0% 50%; }}
+                }}
+
+                .container {{
+                    max-width: 1000px;
+                    width: 100%;
+                    background: var(--glass-bg);
+                    backdrop-filter: blur(12px);
+                    border: 1px solid var(--glass-border);
+                    border-radius: 20px;
+                    padding: 30px;
+                    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+                    transform-style: preserve-3d;
+                    perspective: 1000px;
+                    animation: container-entrance 1s ease-out;
+                }}
+
+                @keyframes container-entrance {{
+                    from {{
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }}
+                    to {{
+                        opacity: 1;
+                        transform: translateY(0);
+                    }}
+                }}
+
+                h1 {{
+                    text-align: center;
+                    font-size: 2.5em;
+                    margin-bottom: 30px;
+                    background: linear-gradient(to right, #fff, #a5f3fc);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    position: relative;
+                    animation: title-glow 2s ease-in-out infinite;
+                }}
+
+                @keyframes title-glow {{
+                    0%, 100% {{
+                        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+                    }}
+                    50% {{
+                        text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+                    }}
+                }}
+
+                table {{
+                    width: 100%;
+                    border-collapse: separate;
+                    border-spacing: 0 8px;
+                    margin-top: 20px;
+                }}
+
+                tr {{
+                    transition: transform 0.3s ease;
+                }}
+
+                tr:hover {{
+                    transform: scale(1.02);
+                }}
+
+                th, td {{
+                    padding: 15px;
+                    text-align: left;
+                    background: var(--glass-bg);
+                    border: 1px solid var(--glass-border);
+                }}
+
+                th {{
+                    background: rgba(255, 255, 255, 0.2);
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                }}
+
+                td:first-child, th:first-child {{
+                    border-radius: 10px 0 0 10px;
+                }}
+
+                td:last-child, th:last-child {{
+                    border-radius: 0 10px 10px 0;
+                }}
+
+                .download-btn {{
+                    color: #fff;
+                    background: linear-gradient(135deg, #00f260, #0575e6);
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 30px;
+                    text-decoration: none;
+                    display: inline-block;
+                    font-weight: 500;
+                    transition: all 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
+                }}
+
+                .download-btn::before {{
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+                    transition: 0.5s;
+                }}
+
+                .download-btn:hover::before {{
+                    left: 100%;
+                }}
+
+                .download-btn:hover {{
+                    transform: translateY(-3px);
+                    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+                }}
+
+                .empty-message {{
+                    text-align: center;
+                    padding: 40px;
+                    font-size: 1.2em;
+                    background: var(--glass-bg);
+                    border-radius: 15px;
+                    border: 1px solid var(--glass-border);
+                    animation: message-pulse 2s infinite;
+                }}
+
+                @keyframes message-pulse {{
+                    0% {{ transform: scale(1); }}
+                    50% {{ transform: scale(1.02); }}
+                    100% {{ transform: scale(1); }}
+                }}
+
+                .particles {{
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    pointer-events: none;
+                    z-index: -1;
+                }}
+
+                .particle {{
+                    position: absolute;
+                    background: rgba(255, 255, 255, 0.5);
+                    border-radius: 50%;
+                    pointer-events: none;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="particles" id="particles"></div>
+            <div class="container">
+                <h1>Servidor Archivos (july 🐎)</h1>
+                {"<p class='empty-message'>No hay archivos disponibles para descargar.</p>" if not files else f'''
+                <table>
+                    <tr>
+                        <th>Nombre del archivo</th>
+                        <th>Acciones</th>
+                    </tr>
+                    {"".join([self.generate_file_row(file) for file in files])}
+                </table>
+                '''}
+            </div>
+
+            <script>
+                function createParticles() {{
+                    const particlesContainer = document.getElementById('particles');
+                    const particleCount = 50;
+
+                    for (let i = 0; i < particleCount; i++) {{
+                        const particle = document.createElement('div');
+                        particle.className = 'particle';
+                        
+                        const size = Math.random() * 4 + 2;
+                        particle.style.width = `${{size}}px`;
+                        particle.style.height = `${{size}}px`;
+                        
+                        particle.style.left = `${{Math.random() * 100}}vw`;
+                        particle.style.top = `${{Math.random() * 100}}vh`;
+                        
+                        const duration = Math.random() * 20 + 10;
+                        const delay = Math.random() * -20;
+                        
+                        particle.style.animation = `
+                            float ${{duration}}s ${{delay}}s infinite linear,
+                            fade 20s infinite linear
+                        `;
+                        
+                        particlesContainer.appendChild(particle);
+                    }}
+                }}
+
+                function handleMouseMove(e) {{
+                    const container = document.querySelector('.container');
+                    const {{ left, top, width, height }} = container.getBoundingClientRect();
+                    const x = e.clientX - left;
+                    const y = e.clientY - top;
+                    
+                    const rotateX = (y - height/2) / 20;
+                    const rotateY = -(x - width/2) / 20;
+                    
+                    container.style.transform = `
+                        perspective(1000px)
+                        rotateX(${{rotateX}}deg)
+                        rotateY(${{rotateY}}deg)
+                    `;
+                }}
+
+                document.addEventListener('DOMContentLoaded', () => {{
+                    createParticles();
+                    document.addEventListener('mousemove', handleMouseMove);
+                    
+                    gsap.from("tr", {{
+                        duration: 0.8,
+                        opacity: 0,
+                        y: 20,
+                        stagger: 0.1,
+                        ease: "power3.out"
+                    }});
+                }});
+
+                const styleSheet = document.styleSheets[0];
+                styleSheet.insertRule(`
+                    @keyframes float {{
+                        0% {{ transform: translate(0, 0); }}
+                        50% {{ transform: translate(20px, -20px); }}
+                        100% {{ transform: translate(0, 0); }}
+                    }}
+                `, styleSheet.cssRules.length);
+
+                styleSheet.insertRule(`
+                    @keyframes fade {{
+                        0%, 100% {{ opacity: 0; }}
+                        50% {{ opacity: 0.8; }}
+                    }}
+                `, styleSheet.cssRules.length);
+            </script>
+        </body>
+        </html>
+        """
+        return html_content
+
+    def generate_file_row(self, filename):
+        return f"""
+        <tr>
+            <td>{filename}</td>
+            <td><a href="/uploads/{filename}" download class="download-btn">Descargar</a></td>
+        </tr>
+        """
+
+class FileUploader(ft.Container):
+    def __init__(
+        self,
+        ring_size:int = 20,
+        server_port:int = 8000
+    ):
+        super().__init__()
+
+        self.server_port = server_port
+        self.server = None
+        self.server_thread = None
+        self.is_server_running = False
+        self.local_ip = get_local_ip()
+
+        self.ring_size = ring_size
+        self.icon_size = self.ring_size * 0.75
+        self.progs_ring: Dict[str, ft.ProgressBar] = {}
+        self.anim_switchers: Dict[str, ft.AnimatedSwitcher] = {}
+        self.files_column = ft.Column()
+        
+        self.fp = ft.FilePicker(
+            on_result=self.handle_file_picked
+        )
+
+        self.upload_button = ft.ElevatedButton("Subir", on_click=self.handle_upload, visible=False)
+        
+        # Server controls con IP local
+        self.server_status = ft.Text("Apagado", color="red")
+        self.ip_text = ft.Text(f"IP: {self.local_ip}", visible=False)
+        self.server_button = ft.ElevatedButton(
+            "Encender",
+            icon=ft.icons.PLAY_ARROW,
+            on_click=self.toggle_server,
+            bgcolor=ft.colors.GREEN
+        )
+        
+        self.server_url = ft.TextButton(
+            "Abrir en el navegador",
+            icon=ft.icons.OPEN_IN_BROWSER,
+            on_click=lambda _: webbrowser.open(f"http://{self.local_ip}:{self.server_port}"),
+            visible=False
+        )
+
+        self.content = ft.Column(
+            [
+                ft.ElevatedButton(
+                    "Seleccionar archivos",
+                    icon=ft.icons.UPLOAD_FILE,
+                    on_click=lambda _: self.fp.pick_files(
+                        allow_multiple=True,
+                        allowed_extensions=["jpg", "png", "jpeg", "pdf", "mp4", "mp3", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "bat", "sh", "py", "c", "cpp", "java", "css", "js", "html", "php", "rb", "go", "js", "py", "cs", "json", "xml", "svg", "psd", "ai", "eps", "indd", "ps", "pdf"]
+                    ),
+                ),
+                self.server_button,
+                ft.Row(
+                    [
+                        self.server_status,
+                        self.ip_text,
+                    ],
+                    alignment=ft.MainAxisAlignment.START
+                ),
+                self.server_url,
+                self.upload_button,
+                self.files_column
+            ]
+        )
+
+    def handle_file_picked(self, e: ft.FilePickerResultEvent):
+        if not e.files:
+            return
+        
+        # first of all we remove evry file from assets/uploads
+        for f in os.listdir(upload_dir):
+            os.remove(os.path.join(upload_dir, f))
+        
+        
+        self.upload_button.visible = True
+        self.upload_button.update()
+        self.progs_ring = {}
+        self.anim_switchers = {}
+        self.files_column.controls.clear()
+        
+        for f in e.files:
+            progress_ring = ft.ProgressRing(
+                value=0,
+                width=self.ring_size,
+                height=self.ring_size,
+                color=ft.colors.GREEN
+            )
+            
+            switcher = ft.AnimatedSwitcher(
+                content=ft.Container(
+                    width=self.ring_size,
+                    height=self.ring_size,
+                    content=ft.Icon(
+                        ft.icons.UPLOAD_FILE,
+                        expand=True,
+                        size=self.icon_size
+                    ),
+                ),
+                duration=300,
+                reverse_duration=100,
+                transition=ft.AnimatedSwitcherTransition.SCALE
+            )
+            
+            self.progs_ring[f.name] = progress_ring
+            self.anim_switchers[f.name] = switcher
+            
+            self.files_column.controls.append(
+                ft.Row(
+                    [
+                        ft.Stack([progress_ring, switcher]),
+                        ft.Text(f.name),
+                    ]
+                )
+            )
+        self.update()
+
+    def handle_upload(self, e):
+        if self.fp.result and self.fp.result.files:
+            for f in self.fp.result.files:
+                try:
+                    dest_path = os.path.join(upload_dir, f.name)
+                    shutil.copy2(f.path, dest_path)
+                    
+                    self.progs_ring[f.name].value = 100
+                    self.anim_switchers[f.name].content = ft.Container(
+                        width=self.ring_size,
+                        height=self.ring_size,
+                        content=ft.Icon(
+                            ft.icons.DONE,
+                            expand=True,
+                            size=self.icon_size
+                        ),
+                    )
+                except Exception as ex:
+                    print(f"Error subiendo {f.name}: {str(ex)}")
+                    self.progs_ring[f.name].color = ft.colors.RED
+                    self.anim_switchers[f.name].content = ft.Container(
+                        width=self.ring_size,
+                        height=self.ring_size,
+                        content=ft.Icon(
+                            ft.icons.ERROR,
+                            expand=True,
+                            size=self.icon_size
+                        ),
+                    )
+                finally:
+                    self.progs_ring[f.name].update()
+                    self.anim_switchers[f.name].update()
+
+    def start_server(self):
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir)
+            
+        handler = partial(CustomHandler, directory=assets_dir)
+        # Cambiar 'localhost' por '0.0.0.0' para escuchar en todas las interfaces
+        self.server = ThreadingHTTPServer(('0.0.0.0', self.server_port), handler)
+        self.server_thread = threading.Thread(target=self.server.serve_forever)
+        self.server_thread.daemon = True
+        self.server_thread.start()
+        self.is_server_running = True
+        
+        self.server_status.value = f"Server: Running on port {self.server_port}"
+        self.server_status.color = "green"
+        self.server_button.text = "Stop Server"
+        self.server_button.icon = ft.icons.STOP
+        self.server_button.bgcolor = ft.colors.RED
+        self.server_url.visible = True
+        self.ip_text.visible = True
+        self.update()
+
+    def stop_server(self):
+        if self.server:
+            self.server.shutdown()
+            self.server.server_close()
+            self.is_server_running = False
+            
+            self.server_status.value = "Apagado"
+            self.server_status.color = "red"
+            self.server_button.text = "Encender"
+            self.server_button.icon = ft.icons.PLAY_ARROW
+            self.server_button.bgcolor = ft.colors.GREEN
+            self.server_url.visible = False
+            self.ip_text.visible = False
+            
+            self.update()
+
+    def toggle_server(self, e):
+        if self.is_server_running:
+            self.stop_server()
+        else:
+            self.start_server()
+
+    def did_mount(self):
+        self.page.overlay.append(self.fp)
+        self.page.update()
+        return super().did_mount()
+
+    def will_unmount(self):
+        self.stop_server()
+        return super().did_mount()
 
 
 class RusContactos(ft.Tabs):
@@ -459,13 +1008,28 @@ def main(page: ft.Page):
                 ),
             ),
             ft.Tab(
+                text="FED",
+                content=ft.Container(
+                    ft.Tabs(
+                        [
+                            TabFederacionFranquicias(),
+                            
+                        ],
+                        tab_alignment=ft.TabAlignment.CENTER,
+                        expand=True,
+                    ),
+                    expand=True,
+                ),
+            ),
+            ft.Tab(
                 text="GENERAL",
                 content=ft.Container(
                     ft.Tabs(
                         [
                             TabGeneralPatentes(),
-                            TabFederacionFranquicias(),
                             ft.Tab(text="Contador Billetes", content=Billetes()),
+                            ft.Tab(text="Server", content=FileUploader()),
+                            
                         ],
                         tab_alignment=ft.TabAlignment.CENTER,
                         expand=True,
