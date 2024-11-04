@@ -55,7 +55,6 @@ class CustomHandler(SimpleHTTPRequestHandler):
         except BrokenPipeError:
             # Ignorar errores de pipe roto
             pass
-
     def generate_html(self):
         files = os.listdir(upload_dir)
         html_content = f"""
@@ -88,7 +87,7 @@ class CustomHandler(SimpleHTTPRequestHandler):
                     animation: gradient 15s ease infinite;
                     display: flex;
                     justify-content: center;
-                    align-items: center;
+                    align-items: flex-start;
                     padding: 20px;
                     color: white;
                     overflow-x: hidden;
@@ -109,20 +108,29 @@ class CustomHandler(SimpleHTTPRequestHandler):
                     border-radius: 20px;
                     padding: 30px;
                     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-                    transform-style: preserve-3d;
-                    perspective: 1000px;
-                    animation: container-entrance 1s ease-out;
+                    margin-top: 20px;
+                    transition: transform 0.3s ease;
                 }}
 
-                @keyframes container-entrance {{
-                    from {{
-                        opacity: 0;
-                        transform: translateY(20px);
-                    }}
-                    to {{
-                        opacity: 1;
-                        transform: translateY(0);
-                    }}
+                .table-container {{
+                    max-height: 70vh;
+                    overflow-y: auto;
+                    border-radius: 15px;
+                    padding-right: 5px;
+                }}
+
+                .table-container::-webkit-scrollbar {{
+                    width: 8px;
+                }}
+
+                .table-container::-webkit-scrollbar-track {{
+                    background: var(--glass-bg);
+                    border-radius: 10px;
+                }}
+
+                .table-container::-webkit-scrollbar-thumb {{
+                    background: var(--glass-border);
+                    border-radius: 10px;
                 }}
 
                 h1 {{
@@ -137,27 +145,24 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 }}
 
                 @keyframes title-glow {{
-                    0%, 100% {{
-                        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-                    }}
-                    50% {{
-                        text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
-                    }}
+                    0%, 100% {{ text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }}
+                    50% {{ text-shadow: 0 0 20px rgba(255, 255, 255, 0.8); }}
                 }}
 
                 table {{
                     width: 100%;
                     border-collapse: separate;
                     border-spacing: 0 8px;
-                    margin-top: 20px;
                 }}
 
                 tr {{
-                    transition: transform 0.3s ease;
+                    transition: all 0.2s ease;
+                    opacity: 0;
+                    transform: translateY(10px);
                 }}
 
                 tr:hover {{
-                    transform: scale(1.02);
+                    transform: translateX(5px) !important;
                 }}
 
                 th, td {{
@@ -168,10 +173,14 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 }}
 
                 th {{
+                    position: sticky;
+                    top: 0;
                     background: rgba(255, 255, 255, 0.2);
+                    backdrop-filter: blur(12px);
                     font-weight: 600;
                     text-transform: uppercase;
                     letter-spacing: 1px;
+                    z-index: 10;
                 }}
 
                 td:first-child, th:first-child {{
@@ -196,23 +205,8 @@ class CustomHandler(SimpleHTTPRequestHandler):
                     overflow: hidden;
                 }}
 
-                .download-btn::before {{
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: -100%;
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-                    transition: 0.5s;
-                }}
-
-                .download-btn:hover::before {{
-                    left: 100%;
-                }}
-
                 .download-btn:hover {{
-                    transform: translateY(-3px);
+                    transform: translateY(-2px);
                     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
                 }}
 
@@ -240,13 +234,7 @@ class CustomHandler(SimpleHTTPRequestHandler):
                     height: 100%;
                     pointer-events: none;
                     z-index: -1;
-                }}
-
-                .particle {{
-                    position: absolute;
-                    background: rgba(255, 255, 255, 0.5);
-                    border-radius: 50%;
-                    pointer-events: none;
+                    opacity: 0.5;
                 }}
             </style>
         </head>
@@ -255,88 +243,96 @@ class CustomHandler(SimpleHTTPRequestHandler):
             <div class="container">
                 <h1>Servidor Archivos (july 🐎)</h1>
                 {"<p class='empty-message'>No hay archivos disponibles para descargar.</p>" if not files else f'''
-                <table>
-                    <tr>
-                        <th>Nombre del archivo</th>
-                        <th>Acciones</th>
-                    </tr>
-                    {"".join([self.generate_file_row(file) for file in files])}
-                </table>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>Nombre del archivo</th>
+                            <th>Acciones</th>
+                        </tr>
+                        {"".join([self.generate_file_row(file) for file in files])}
+                    </table>
+                </div>
                 '''}
             </div>
 
             <script>
                 function createParticles() {{
                     const particlesContainer = document.getElementById('particles');
-                    const particleCount = 50;
-
+                    const particleCount = 30; // Reduced particle count
+                    
                     for (let i = 0; i < particleCount; i++) {{
                         const particle = document.createElement('div');
                         particle.className = 'particle';
-                        
-                        const size = Math.random() * 4 + 2;
-                        particle.style.width = `${{size}}px`;
-                        particle.style.height = `${{size}}px`;
-                        
+                        particle.style.width = '3px';
+                        particle.style.height = '3px';
+                        particle.style.background = 'rgba(255, 255, 255, 0.5)';
+                        particle.style.borderRadius = '50%';
+                        particle.style.position = 'absolute';
                         particle.style.left = `${{Math.random() * 100}}vw`;
                         particle.style.top = `${{Math.random() * 100}}vh`;
                         
-                        const duration = Math.random() * 20 + 10;
-                        const delay = Math.random() * -20;
-                        
-                        particle.style.animation = `
-                            float ${{duration}}s ${{delay}}s infinite linear,
-                            fade 20s infinite linear
-                        `;
-                        
                         particlesContainer.appendChild(particle);
+                        
+                        animateParticle(particle);
                     }}
                 }}
 
-                function handleMouseMove(e) {{
+                function animateParticle(particle) {{
+                    const duration = 10 + Math.random() * 20;
+                    const startX = parseFloat(particle.style.left);
+                    const startY = parseFloat(particle.style.top);
+                    
+                    gsap.to(particle, {{
+                        duration: duration,
+                        x: -20 + Math.random() * 40,
+                        y: -20 + Math.random() * 40,
+                        opacity: gsap.utils.random(0.3, 0.7),
+                        ease: "none",
+                        repeat: -1,
+                        yoyo: true
+                    }});
+                }}
+
+                function handleHover() {{
                     const container = document.querySelector('.container');
-                    const {{ left, top, width, height }} = container.getBoundingClientRect();
-                    const x = e.clientX - left;
-                    const y = e.clientY - top;
                     
-                    const rotateX = (y - height/2) / 20;
-                    const rotateY = -(x - width/2) / 20;
+                    container.addEventListener('mousemove', (e) => {{
+                        const rect = container.getBoundingClientRect();
+                        const x = (e.clientX - rect.left) / rect.width - 0.5;
+                        const y = (e.clientY - rect.top) / rect.height - 0.5;
+                        
+                        gsap.to(container, {{
+                            duration: 0.5,
+                            rotationY: x * 5, // Reduced rotation
+                            rotationX: -y * 5, // Reduced rotation
+                            ease: "power2.out"
+                        }});
+                    }});
                     
-                    container.style.transform = `
-                        perspective(1000px)
-                        rotateX(${{rotateX}}deg)
-                        rotateY(${{rotateY}}deg)
-                    `;
+                    container.addEventListener('mouseleave', () => {{
+                        gsap.to(container, {{
+                            duration: 0.5,
+                            rotationY: 0,
+                            rotationX: 0,
+                            ease: "power2.out"
+                        }});
+                    }});
                 }}
 
                 document.addEventListener('DOMContentLoaded', () => {{
                     createParticles();
-                    document.addEventListener('mousemove', handleMouseMove);
+                    handleHover();
                     
-                    gsap.from("tr", {{
-                        duration: 0.8,
-                        opacity: 0,
-                        y: 20,
-                        stagger: 0.1,
-                        ease: "power3.out"
+                    // Animate table rows
+                    const rows = document.querySelectorAll('tr');
+                    gsap.to(rows, {{
+                        opacity: 1,
+                        y: 0,
+                        duration: 0.5,
+                        stagger: 0.05,
+                        ease: "power2.out"
                     }});
                 }});
-
-                const styleSheet = document.styleSheets[0];
-                styleSheet.insertRule(`
-                    @keyframes float {{
-                        0% {{ transform: translate(0, 0); }}
-                        50% {{ transform: translate(20px, -20px); }}
-                        100% {{ transform: translate(0, 0); }}
-                    }}
-                `, styleSheet.cssRules.length);
-
-                styleSheet.insertRule(`
-                    @keyframes fade {{
-                        0%, 100% {{ opacity: 0; }}
-                        50% {{ opacity: 0.8; }}
-                    }}
-                `, styleSheet.cssRules.length);
             </script>
         </body>
         </html>
