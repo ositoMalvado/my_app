@@ -1,0 +1,18 @@
+[
+    {
+        "role": "user",
+        "text": "hola"
+    },
+    {
+        "role": "model",
+        "text": "Hola!  \u00bfQu\u00e9 tal? \u00bfEn qu\u00e9 te puedo ayudar hoy? \n"
+    },
+    {
+        "role": "user",
+        "text": "en muchas cosas"
+    },
+    {
+        "role": "model",
+        "text": "\u00a1Me alegra escuchar eso!  \u00bfPuedes ser m\u00e1s espec\u00edfico?  \u00bfQu\u00e9 tipo de cosas te gustar\u00eda que te ayude? \n"
+    }
+]

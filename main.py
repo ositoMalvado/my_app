@@ -8,8 +8,11 @@ import socket
 from typing import Dict
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import threading
+import json
 import webbrowser
 from functools import partial
+import google.generativeai as genai
+import PIL.Image
 
 os.environ["FLET_SECRET_KEY"] = "zxczxczxcSS"
 os.environ["FLET_UPLOAD_DIR"] = "assets/uploads"
@@ -19,6 +22,9 @@ upload_dir = os.path.join(assets_dir, "uploads")
 
 # Ensure upload directory exists
 os.makedirs(upload_dir, exist_ok=True)
+
+
+
 
 def get_local_ip():
     try:
@@ -30,6 +36,608 @@ def get_local_ip():
         return ip
     except Exception:
         return "0.0.0.0"  # Fallback a todas las interfaces si no se puede determinar la IP
+
+
+
+class ChatBot(ft.Container):
+    # we read the API key from env: genai_api_key
+    def __init__(
+            self,
+            token,
+            bot_name,
+            user_name,
+            json_path,
+            tf_label = "Pregunta algo",
+            auto_scroll=True,
+            sleep=None,
+            autofocus=False,
+            autoload=False,
+            bubble_radius=10,
+            bubble_padding=5,
+            animation_duration = 1000,
+            user_header_bgcolor = ft.colors.PRIMARY_CONTAINER,
+            user_header_border_color = ft.colors.PRIMARY,
+            user_chat_bgcolor = ft.colors.PRIMARY_CONTAINER,
+            user_chat_border_color = ft.colors.SECONDARY,
+            bot_header_bgcolor = ft.colors.SECONDARY_CONTAINER,
+            bot_header_border_color = ft.colors.PRIMARY,
+            bot_chat_bgcolor = ft.colors.SECONDARY_CONTAINER,
+            bot_chat_border_color = ft.colors.SECONDARY,
+            font_family=None,
+        ):
+        super().__init__()
+        genai.configure(api_key=token)
+        self.bot_name = bot_name
+        self.user_name = user_name
+        self.json_path = json_path
+        self.auto_scroll = auto_scroll
+        self.sleep = sleep
+        self.autofocus = autofocus
+        self.bubble_radius = bubble_radius
+        self.bubble_padding = bubble_padding
+        self.autoload = autoload
+        self.animation_duration = animation_duration
+        self.tf_label = tf_label
+        self.user_header_bgcolor = user_header_bgcolor
+        self.user_header_border_color = user_header_border_color
+        self.bot_header_bgcolor = bot_header_bgcolor
+        self.bot_header_border_color = bot_header_border_color
+        self.user_chat_bgcolor = user_chat_bgcolor
+        self.user_chat_border_color = user_chat_border_color
+        self.bot_chat_bgcolor = bot_chat_bgcolor
+        self.bot_chat_border_color = bot_chat_border_color
+        self.play_audio = False
+        self.selected_image = None
+        self.pil_image = None
+        self.bot_message_container = None
+        self.font_family = font_family
+        self.expand = True
+        # self.on_click = self.disable_keyboard
+                # Initialize COM for pyttsx3
+        # pythoncom.CoInitialize()
+        # self.engine = pyttsx3.init()
+        # voices = self.engine.getProperty('voices')
+        # for voice in voices:
+        #     # print(voice)
+        #     if "Helena" in voice.name:
+        #     # if "Helena" in voice.name:  # Selecciona la voz de Zira
+        #         self.engine.setProperty('voice', voice.id)
+        #         # break
+        # # self.engine.setProperty('voice', voices[1])
+        # self.engine.setProperty('rate', 260)
+        self.init_container()
+        self.init_bot()
+        try:
+            self.load_history()
+        except:
+            pass
+
+    def delete_image(self, e=None):
+        self.selected_image = None
+        self.pil_image = None
+        self.button_adjuntar.icon_color = None
+        self.button_adjuntar.on_click = self.pick_image
+        self.button_adjuntar.update()
+
+    def image_selected(self, e: ft.FilePickerResultEvent):
+        # print(e.files[0].path)
+        try:
+            self.selected_image = e.files[0].path
+            with open(e.files[0].path, "rb") as image_file:
+                img_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+                # print(img_base64)
+            img_data = base64.b64decode(img_base64)
+            self.pil_image = PIL.Image.open(BytesIO(img_data))
+            self.button_adjuntar.icon_color = "red"
+            self.button_adjuntar.on_click = self.delete_image
+            self.button_adjuntar.update()
+        except Exception as e:
+            pass
+
+    def pick_image(self, e=None):
+        self.image_uploader.pick_files(
+            dialog_title="Elige una imagen",
+            allow_multiple=False,
+            allowed_extensions=["png", "jpg", "jpeg"],
+            file_type=ft.FilePickerFileType.IMAGE,
+        )
+
+    def init_file_picker(self, page):
+        self.image_uploader = ft.FilePicker(
+            on_result=self.image_selected,
+        )
+        page.overlay.append(self.image_uploader)
+        self.button_adjuntar.on_click = self.pick_image
+        page.update()
+
+    def did_mount(self):
+        self.init_file_picker(self.page)
+        # self.bot_audio = ft.Audio("asd")
+        # self.page.overlay.append(self.bot_audio)
+        return super().did_mount()
+    
+    def name_container(self, content, color, border_color, user):
+        return ft.Container(
+            padding=ft.padding.only(left=self.bubble_padding if user else 0, right=self.bubble_padding if not user else 0),
+            content=ft.Container(
+                content=content,
+                bgcolor=color,
+                border=ft.border.all(1, border_color),
+                padding=ft.padding.only(left=5, right=5, top=2, bottom=2),
+                border_radius=ft.border_radius.only(
+                    top_left=self.bubble_radius, bottom_left=0 if user else self.bubble_radius, top_right=self.bubble_radius, bottom_right=self.bubble_radius if user else 0
+                ),
+                # expand=True
+            ),
+        )
+    def message_container(self, content, color, border_color, user, visible=True):
+        return ft.Container(
+            padding=ft.padding.only(left=self.bubble_padding if user else 0, right=self.bubble_padding if not user else 0),
+            content=ft.Container(
+                content=content,
+                bgcolor=color,
+                border=ft.border.all(1, border_color),
+                padding=ft.padding.only(left=5, right=5, top=2, bottom=2),
+                border_radius=ft.border_radius.only(
+                    top_left=self.bubble_radius if not user else 0, bottom_left=self.bubble_radius, top_right=0 if not user else self.bubble_radius, bottom_right=self.bubble_radius
+                ),
+                visible=visible
+            ),
+        )
+
+    def disable_keyboard(self, e=None):
+        self.tf_entrada.disabled = True
+        self.tf_entrada.update()
+        self.tf_entrada.disabled = False
+        self.tf_entrada.update()
+
+    def column_end(self):
+        time.sleep(0.1)
+        self.columna_principal.scroll_to(offset=-1, duration=0)
+
+    def tf_submit(self, e):
+        message = self.tf_entrada.value
+        if not message:
+            return
+        
+        self.tf_entrada.read_only = True
+        self.tf_entrada.value = ""
+        self.tf_entrada.update()
+
+        user_name_container = self.name_container(
+            ft.Text(f"{self.user_name}"),
+            self.user_header_bgcolor,
+            self.user_header_border_color,
+            user=True)
+        columna = ft.Column(
+            [
+                self.message_container(
+                    ft.Markdown(
+                        message,
+                        selectable=True,
+                        extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+                        on_tap_link=lambda e: self.page.launch_url(e.data),
+                        code_style_sheet=ft.TextStyle(font_family=self.font_family) if self.font_family else None,
+                        code_theme=ft.MarkdownCodeTheme.OCEAN,
+                        expand=True,
+                    ),
+                    self.user_chat_bgcolor,
+                    self.user_chat_border_color,
+                    user=True
+                )
+            ],
+            spacing=5
+        )
+        if self.selected_image:
+            columna.controls.append(ft.Image(src=self.selected_image))
+        user_message_container = ft.Container(
+            expand=True,
+            content=columna,
+            animate_opacity=ft.Animation(self.animation_duration, ft.AnimationCurve.FAST_OUT_SLOWIN),
+            animate_offset=ft.Animation(self.animation_duration, ft.AnimationCurve.FAST_OUT_SLOWIN),
+            animate_scale=ft.Animation(self.animation_duration, ft.AnimationCurve.FAST_OUT_SLOWIN),
+            scale=0,
+            opacity=0,
+            offset=ft.Offset(-0.5,-0.5)
+        )
+        user_name_container.scale = 0
+        user_name_container.opacity = 0
+        user_name_container.offset = ft.Offset(-0.5,0.5)
+        def show_user_name():
+            time.sleep(0.1)
+            user_message_container.scale = 1
+            user_message_container.opacity = 1
+            user_message_container.offset = ft.Offset(0,0)    
+            user_message_container.update()
+            user_name_container.scale = 1
+            user_name_container.opacity = 1
+            user_name_container.offset = ft.Offset(0,0)    
+            user_name_container.update()
+        user_name_container.animate_scale = ft.Animation(self.animation_duration, ft.AnimationCurve.FAST_OUT_SLOWIN)
+        user_name_container.animate_opacity = ft.Animation(self.animation_duration, ft.AnimationCurve.FAST_OUT_SLOWIN)
+        user_name_container.animate_offset = ft.Animation(self.animation_duration, ft.AnimationCurve.FAST_OUT_SLOWIN)
+        self.columna_principal.controls.append(
+            ft.Row(
+                controls=[
+                    ft.Column(
+                        controls=[
+                            user_name_container,
+                            user_message_container
+                        ],
+                        spacing=0,
+                        expand=True
+                    )
+                ],
+                expand=True
+            )
+        )
+        self.button_send.visible = False
+        self.button_send.update()
+        self.columna_principal.update()
+        threading.Thread(target=self.column_end).start()
+        threading.Thread(target=show_user_name).start()
+        self.send_message(message)
+        self.delete_image()
+        self.save_history()
+        self.tf_entrada.read_only = False
+        self.tf_entrada.update()
+        self.columna_principal.update()
+        if self.autofocus:
+            self.tf_entrada.focus()
+        threading.Thread(target=self.column_end).start()
+        self.update()
+
+    def tf_change(self, e):
+        if self.tf_entrada.value:
+            self.button_send.visible = True
+            self.button_send.update()
+        else:
+            self.button_send.visible = False
+            self.button_send.update()
+
+    def toggle_options(self, e):
+        if self.row_opciones.visible:
+            self.row_opciones.scale = 0
+            self.row_opciones.update()
+            time.sleep(self.animation_duration/8000)
+            self.row_opciones.visible = False
+            self.button_expandir_opciones.icon = ft.icons.ARROW_LEFT_SHARP
+        else:
+            self.row_opciones.visible = True
+            self.row_opciones.update()
+            time.sleep(self.animation_duration/8000)
+            self.row_opciones.scale = 1
+            self.button_expandir_opciones.icon = ft.icons.ARROW_RIGHT_SHARP
+        self.button_expandir_opciones.update()
+        self.row_opciones.update()
+
+    def init_container(self):
+        
+        def close_keyboard(e):
+            print("funciona")
+            self.tf_entrada.disabled = True
+            self.tf_entrada.update()
+            time.sleep(0.01)
+            self.tf_entrada.disabled = False
+            self.tf_entrada.update()
+        self.tf_entrada = ft.TextField(
+            label=self.tf_label,
+            autofocus=True,
+            on_submit=self.tf_submit,
+            expand=True,
+            on_change=self.tf_change,
+            suffix=ft.IconButton(
+                ft.icons.KEYBOARD_ARROW_DOWN,
+                on_click=close_keyboard,
+                padding=0,
+                height=40,
+            ),
+            content_padding=5,
+            height=40,
+            multiline=True
+        )
+        self.columna_principal = ft.Column(
+            expand=True,
+            scroll=ft.ScrollMode.HIDDEN,
+            auto_scroll=self.auto_scroll,
+            spacing=5,
+        )
+        self.button_send = ft.IconButton(
+            ft.icons.SEND,
+            on_click=self.tf_submit,
+            visible=False
+        )
+
+        self.button_adjuntar = ft.IconButton(
+            ft.icons.UPLOAD_SHARP,
+
+        )
+        self.button_expandir_opciones = ft.IconButton(
+            ft.icons.ARROW_LEFT_SHARP,
+            on_click=lambda e: threading.Thread(target=self.toggle_options(e)).start(),
+            visible=True
+        )
+        self.row_opciones = ft.Row(
+            controls=[
+                self.button_adjuntar
+            ],
+            scale=0,
+            animate_scale=ft.Animation(int(self.animation_duration/8), ft.AnimationCurve.EASE_IN_OUT),
+            visible=False,
+        )
+        self.buttons_row = ft.Row(
+            [
+                self.row_opciones,
+                self.button_expandir_opciones,
+                self.button_send,
+            ],
+            spacing=0
+        )
+        self.content_chat = ft.Column(
+            controls=[
+                self.columna_principal,
+                ft.Row(
+                    controls=[
+                        ft.Row(
+                            [
+                                self.tf_entrada,
+                                self.buttons_row
+                            ],
+                            expand=True,
+                            spacing=0
+                        )
+                    ],
+                    # expand=True
+                ),
+            ],
+            expand=True
+        )
+        self.content = ft.SafeArea(
+            expand=True,
+            content=self.content_chat
+            # ResponsiveColumn(
+            #     controls=[
+            #         ResponsiveControl(
+            #             ,
+            #             # debug="red"
+            #         )
+            #     ]
+            # )
+        )
+        
+        
+
+
+    def init_bot(self):
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.chat = self.model.start_chat(history=[])
+        self.response = None
+        if self.autoload:
+            self.load_history()
+
+
+    def will_unmount(self):
+        print("desmontado")
+        self.working = False
+        return super().will_unmount()
+
+    def show_response(self):
+        self.bot_message_container.visible = True
+        self.bot_message_container.update()
+        time.sleep(0.15)
+        self.bot_message_container.scale = 1
+        self.bot_message_container.opacity = 1
+        self.bot_message_container.offset = ft.Offset(0,0)    
+        self.bot_message_container.update()
+
+    def send_message(self, message):
+        contenido = [message]
+        if self.pil_image:
+            contenido[0] = "Analyze the provided image thoroughly and generate an exhaustive, meticulous description capturing every detail with pinpoint accuracy. ; prioritize thoroughness and precision over conciseness.. ((RESPONDE EN UN SOLO PARRAFO NO MAS DE 250 PALABRAS))"
+            contenido.append(self.pil_image)
+        self.md_response = ft.Markdown(
+            "",
+            selectable=True,
+            code_style_sheet=ft.TextStyle(font_family=self.font_family) if self.font_family else None,
+            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+            on_tap_link=lambda e: self.page.launch_url(e.data),
+            code_theme=ft.MarkdownCodeTheme.OCEAN,
+            expand=True,
+        )
+        self.bot_message_container = ft.Container(
+            self.message_container(
+                self.md_response,
+                self.bot_chat_bgcolor,
+                self.bot_chat_border_color,
+                user=False,
+            ),
+            animate_opacity=ft.Animation(self.animation_duration, ft.AnimationCurve.FAST_OUT_SLOWIN),
+            animate_offset=ft.Animation(self.animation_duration, ft.AnimationCurve.FAST_OUT_SLOWIN),
+            animate_scale=ft.Animation(self.animation_duration, ft.AnimationCurve.FAST_OUT_SLOWIN),
+            scale=0,
+            opacity=0,
+            offset=ft.Offset(0.5,0.5),
+            expand=True,
+            visible=False
+        )
+        bot_name_container = self.name_container(
+            ft.Text(f"{self.bot_name}"),
+            self.bot_header_bgcolor,
+            self.bot_header_border_color,
+            user=False
+        )
+        bot_name_container.scale = 0
+        bot_name_container.opacity = 0
+        bot_name_container.offset = ft.Offset(0.5,0.5)
+        def show_user_name():
+            time.sleep(0.15)
+            bot_name_container.scale = 1
+            bot_name_container.opacity = 1
+            bot_name_container.offset = ft.Offset(0,0)    
+            bot_name_container.update()
+        bot_name_container.animate_scale = ft.Animation(self.animation_duration, ft.AnimationCurve.FAST_OUT_SLOWIN)
+        bot_name_container.animate_opacity = ft.Animation(self.animation_duration, ft.AnimationCurve.FAST_OUT_SLOWIN)
+        bot_name_container.animate_offset = ft.Animation(self.animation_duration, ft.AnimationCurve.FAST_OUT_SLOWIN)
+        self.columna_principal.controls.append(
+            ft.Row(
+                controls=[
+                    ft.Column(
+                        controls=[
+                            ft.Row(
+                                expand=True,
+                                alignment=ft.MainAxisAlignment.END,
+                                controls=[
+                                    bot_name_container,
+                                ]
+                            ),
+                            ft.Row(
+                                expand=True,
+                                alignment=ft.MainAxisAlignment.END,
+                                controls=[
+                                    self.bot_message_container,
+                                ]
+                            )
+                        ],
+                        spacing=0,
+                        expand=True
+                    )
+                ],
+                expand=True
+            )
+        )
+        self.columna_principal.update()
+        
+        def update_message():
+            def get_response():
+                try:
+                    self.response = self.chat.send_message(
+                        content=contenido,
+                        safety_settings={
+                            'HARASSMENT': 'block_none',
+                            'SEXUALLY_EXPLICIT': 'block_none',
+                            'HATE_SPEECH': 'block_none',
+                        },
+                        stream=True
+                    )
+                except:
+                    print("error al response")
+            while not self.response:
+                get_response()
+                time.sleep(0.5)
+            for chunk in self.response:
+                time.sleep(0.5)
+                if not self.bot_message_container.visible:
+                    # print("funciona")
+                    # self.show_response()
+                    threading.Thread(target=self.show_response).start()
+                try:
+                    self.working = True
+                    self.finalizado = False
+                    for letter in chunk.text:
+                        # print(letter)
+                        if self.working and not self.finalizado:
+                            self.md_response.value += letter # chunk.text
+                            self.md_response.update()
+                except Exception as e:
+                    try:
+                        last_send, last_received = self.chat.rewind()
+                    except:
+                        try:
+                            self.response.resolve()
+                        except:
+                            print("puto error 0 de 2")
+                        print("puto error 1 de 2")
+                    print("puto error 2 de 2")
+                    # self.md_response.value = self.response.text # chunk.text
+                    # self.md_response.update()
+                    # self.send_message(message)
+                if self.working:
+                    self.columna_principal.scroll_to(offset=0, curve=ft.AnimationCurve.FAST_OUT_SLOWIN, duration=100)
+            self.response = None
+            self.working = False
+            self.finalizado = False
+        def save_then_play():
+            if os.path.exists("bot.mp3"):
+                os.remove("bot.mp3")
+            # self.engine.save_to_file(self.md_response.value, "bot.mp3")
+            # self.engine.runAndWait()
+            # self.engine.stop()
+            # self.bot_audio.pause()
+            # self.page.overlay.remove(self.bot_audio)
+            # self.bot_audio = ft.Audio(src="bot.mp3")
+            # self.page.overlay.append(self.bot_audio)
+            self.page.update()
+            time.sleep(0.5)
+            # if self.play_audio:
+                # self.bot_audio.play()
+        show_user_name()
+        update_message()
+        # threading.Thread(target=show_user_name).start()
+        # threading.Thread(target=update_message).start()
+        threading.Thread(target=save_then_play).start()
+
+    def get_candidate(self):
+        return self.response.candidates
+
+    def get_models(self):
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                pass
+                # print(m.name)
+
+    def reset_history(self):
+        self.chat = self.model.start_chat(history=[])
+        self.save_history
+
+    def load_history(self):
+        try:
+            with open(self.json_path, 'r') as f:
+                chat_history = json.load(f)
+        except FileNotFoundError:
+            chat_history = []
+
+        if not chat_history:
+            return
+
+        for message in chat_history:
+            role = message['role']
+            text = message['text']
+            
+            # Convertir el formato al que espera el modelo
+            if role == 'user':
+                self.chat.history.append({
+                    'role': 'user',
+                    'parts': [{'text': text}]
+                })
+            elif role == 'model':
+                self.chat.history.append({
+                    'role': 'model',
+                    'parts': [{'text': text}]
+                })
+
+    def save_history(self):
+        chat_history_serializable = []
+        for message in self.chat.history:
+            # Verificar si el mensaje es un objeto Content
+            if hasattr(message, 'role') and hasattr(message, 'parts'):
+                role = message.role
+                # Asumimos que el texto está en la primera parte del mensaje
+                text = message.parts[0].text if message.parts else ""
+            else:
+                # Si no es un objeto Content, intentamos acceder como diccionario
+                role = message.get('role', 'unknown')
+                text = message.get('parts', [{}])[0].get('text', "")
+
+            chat_history_serializable.append({
+                'role': role,
+                'text': text
+            })
+
+        with open(self.json_path, 'w') as f:
+            json.dump(chat_history_serializable, f, indent=4)
+
+
+
 
 class CustomHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, directory=None, **kwargs):
@@ -1025,6 +1633,15 @@ def main(page: ft.Page):
                             TabGeneralPatentes(),
                             ft.Tab(text="Contador Billetes", content=Billetes()),
                             ft.Tab(text="Server", content=FileUploader()),
+                            ft.Tab(text="ChatBot", content=ChatBot(
+                                    token="AIzaSyCTpmY_rKZLlWc-AnnyjUqbj5SHrfG3NWo",
+                                    bot_name=f"ChatBot",
+                                    user_name="Usuario",
+                                    json_path=f"chat_history.json",
+                                    autofocus=False,
+                                    font_family="GasoekOne"
+                                )
+                            )
                             
                         ],
                         tab_alignment=ft.TabAlignment.CENTER,
