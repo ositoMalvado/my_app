@@ -1,3 +1,5 @@
 venv/
 # i want to ignore the .github folder
 # .github/
+assets/uploads/*
+__pycache__
