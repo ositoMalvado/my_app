@@ -11,8 +11,6 @@ import threading
 import json
 import webbrowser
 from functools import partial
-import google.generativeai as genai
-import PIL.Image
 
 os.environ["FLET_SECRET_KEY"] = "zxczxczxcSS"
 os.environ["FLET_UPLOAD_DIR"] = "assets/uploads"
