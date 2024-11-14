@@ -6,7 +6,7 @@ authors = [
     {name = "Julián Perez", email = "mordecaaii@gmail.com"}
 ]
 dependencies = [
-    "flet==0.25.0.dev3526"
+    "flet==0.25.0.dev3721"
 ]
 
 [tool.flet]
